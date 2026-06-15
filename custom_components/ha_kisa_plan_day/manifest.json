@@ -1,0 +1,10 @@
+{
+  "domain": "ha_kisa_plan_day",
+  "name": "HA KiSa Uni Plan",
+  "documentation": "https://github.com/kornalexandr2/ha-kisa-uni-plan",
+  "dependencies": [],
+  "codeowners": ["@kornalexandr2"],
+  "config_flow": true,
+  "iot_class": "local_push",
+  "version": "1.0.0"
+}

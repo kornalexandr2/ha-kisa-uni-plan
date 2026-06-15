@@ -1,0 +1,63 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Создание HA KiSa Uni Plan",
+        "data": {
+          "plan_name": "Название плана",
+          "start_time": "Время начала",
+          "workdays_only": "Только по рабочим дням",
+          "workday_sensor": "Сенсор рабочих дней"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Этот план уже настроен"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "Управление планом",
+        "menu_options": {
+          "add_step": "Добавить шаг",
+          "manage_steps": "Управление шагами",
+          "settings": "Общие настройки"
+        }
+      },
+      "settings": {
+        "title": "Общие настройки",
+        "data": {
+          "start_time": "Время начала",
+          "workdays_only": "Только по рабочим дням"
+        }
+      },
+      "add_step": {
+        "title": "Добавление шага",
+        "data": {
+          "entity_id": "Сущность",
+          "action": "Действие",
+          "delay": "Задержка (сек)",
+          "enabled": "Активен"
+        }
+      },
+      "manage_steps": {
+        "title": "Управление шагами",
+        "data": {
+          "selected_step": "Выберите шаг для редактирования"
+        }
+      },
+      "edit_step": {
+        "title": "Редактирование шага {step_num}",
+        "data": {
+          "entity_id": "Сущность",
+          "action": "Действие",
+          "delay": "Задержка перед выполнением (сек)",
+          "enabled": "Активен",
+          "order": "Порядковый номер (начиная с 0)",
+          "delete": "Удалить этот шаг"
+        }
+      }
+    }
+  }
+}

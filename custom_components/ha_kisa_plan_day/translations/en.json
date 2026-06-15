@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create HA KiSa Uni Plan",
+        "data": {
+          "plan_name": "Plan Name",
+          "start_time": "Start Time",
+          "workdays_only": "Workdays only",
+          "workday_sensor": "Workday Sensor"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "Manage Plan",
+        "menu_options": {
+          "add_step": "Add Step",
+          "manage_steps": "Manage Steps",
+          "settings": "General Settings"
+        }
+      },
+      "settings": {
+        "title": "General Settings",
+        "data": {
+          "start_time": "Start Time",
+          "workdays_only": "Workdays only"
+        }
+      },
+      "add_step": {
+        "title": "Add Step",
+        "data": {
+          "entity_id": "Entity",
+          "action": "Action",
+          "delay": "Delay (sec)",
+          "enabled": "Enabled"
+        }
+      },
+      "manage_steps": {
+        "title": "Manage Steps",
+        "data": {
+          "clear_all": "Clear all steps"
+        }
+      }
+    }
+  }
+}

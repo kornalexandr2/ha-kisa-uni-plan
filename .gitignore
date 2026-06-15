@@ -1,0 +1,8 @@
+source_info/
+.DS_Store
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.vscode/
+.idea/
