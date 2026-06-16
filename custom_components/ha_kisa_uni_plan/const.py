@@ -1,6 +1,6 @@
 """Constants for the KiSa Plan Day integration."""
 
-DOMAIN = "ha_kisa_plan_day"
+DOMAIN = "ha_kisa_uni_plan"
 
 CONF_PLAN_NAME = "plan_name"
 CONF_TIME = "start_time"

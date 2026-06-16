@@ -1,5 +1,5 @@
 {
-  "domain": "ha_kisa_plan_day",
+  "domain": "ha_kisa_uni_plan",
   "name": "HA KiSa Uni Plan",
   "documentation": "https://github.com/kornalexandr2/ha-kisa-uni-plan",
   "dependencies": [],
