@@ -56,30 +56,42 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry):
         """Initialize options flow."""
         self.config_entry = config_entry
-        # Храним шаги в экземпляре на время одной сессии
         self.steps = []
         self.current_edit_index = None
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
         try:
-            _LOGGER.debug("Init Options Flow for: %s", self.config_entry.title)
-            # Инициализируем шаги при первом запуске
             self.steps = list(self.config_entry.options.get("steps", []))
-            return await self.async_step_menu()
-        except Exception as e:
-            _LOGGER.exception("Error in async_step_init: %s", e)
-            return self.async_abort(reason="unknown")
+            
+            if user_input is not None:
+                action = user_input.get("action")
+                if action == "settings":
+                    return await self.async_step_settings()
+                elif action == "add_step":
+                    return await self.async_step_add_step()
+                elif action == "manage_steps":
+                    return await self.async_step_manage_steps()
 
-    async def async_step_menu(self, user_input=None):
-        """Show menu for options."""
-        try:
-            return self.async_show_menu(
-                step_id="menu",
-                menu_options=["add_step", "manage_steps", "settings"],
+            return self.async_show_form(
+                step_id="init",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required("action", default="settings"): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    {"value": "settings", "label": "Общие настройки"},
+                                    {"value": "add_step", "label": "Добавить шаг"},
+                                    {"value": "manage_steps", "label": "Управление шагами"},
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
+                    }
+                ),
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_menu: %s", e)
+            _LOGGER.exception("Error in async_step_init: %s", e)
             return self.async_abort(reason="unknown")
 
     async def async_step_settings(self, user_input=None):
@@ -134,7 +146,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Show list of steps to manage."""
         try:
             if not self.steps:
-                return await self.async_step_menu()
+                return await self.async_step_init()
 
             if user_input is not None:
                 selected = user_input.get("selected_step")
@@ -169,7 +181,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Edit or remove a specific step."""
         try:
             if self.current_edit_index is None or self.current_edit_index >= len(self.steps):
-                return await self.async_step_menu()
+                return await self.async_step_init()
 
             current_step = self.steps[self.current_edit_index]
 
