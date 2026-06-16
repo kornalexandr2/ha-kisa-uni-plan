@@ -74,14 +74,9 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_menu(self, user_input=None):
         """Show menu for options."""
         try:
-            menu_options = {
-                "add_step": "Добавить шаг",
-                "manage_steps": "Управление шагами",
-                "settings": "Общие настройки",
-            }
             return self.async_show_menu(
                 step_id="menu",
-                menu_options=menu_options,
+                menu_options=["add_step", "manage_steps", "settings"],
             )
         except Exception as e:
             _LOGGER.exception("Error in async_step_menu: %s", e)
