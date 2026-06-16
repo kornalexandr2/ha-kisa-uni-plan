@@ -124,8 +124,15 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 self.steps = []
                 return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
             else:
-                self._current_step_index = int(user_input["selected_step"])
-                return await self.async_step_edit_step()
+                try:
+                    self._current_step_index = int(user_input["selected_step"])
+                    return self.async_show_form(
+                        step_id="edit_step",
+                        data_schema=self._get_edit_schema(self._current_step_index),
+                        description_placeholder={"step_num": str(self._current_step_index + 1)},
+                    )
+                except ValueError:
+                    return await self.async_step_menu()
 
         options = {str(i): f"Шаг {i+1}: {step.get('entity_id')} ({step.get('action')})" for i, step in enumerate(self.steps)}
         options["clear_all"] = "Удалить все шаги"
@@ -144,12 +151,33 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
 
+    def _get_edit_schema(self, index: int):
+        """Get the schema for editing a step."""
+        current_step = self.steps[index]
+        return vol.Schema(
+            {
+                vol.Required("entity_id", default=current_step.get("entity_id")): selector.EntitySelector(),
+                vol.Required("action", default=current_step.get("action", "turn_on")): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["turn_on", "turn_off", "toggle"],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required("delay", default=current_step.get("delay", 0)): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
+                ),
+                vol.Required("enabled", default=current_step.get("enabled", True)): bool,
+                vol.Required("order", default=index): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=max(0, len(self.steps) - 1), mode=selector.NumberSelectorMode.BOX)
+                ),
+                vol.Optional("delete", default=False): bool,
+            }
+        )
+
     async def async_step_edit_step(self, user_input=None):
         """Edit or remove a specific step."""
         if self._current_step_index is None or self._current_step_index >= len(self.steps):
             return await self.async_step_menu()
-
-        current_step = self.steps[self._current_step_index]
 
         if user_input is not None:
             if user_input.get("delete"):
@@ -172,26 +200,5 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 
             return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
 
-        return self.async_show_form(
-            step_id="edit_step",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("entity_id", default=current_step.get("entity_id")): selector.EntitySelector(),
-                    vol.Required("action", default=current_step.get("action", "turn_on")): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=["turn_on", "turn_off", "toggle"],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                    vol.Required("delay", default=current_step.get("delay", 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
-                    ),
-                    vol.Required("enabled", default=current_step.get("enabled", True)): bool,
-                    vol.Required("order", default=self._current_step_index): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=max(0, len(self.steps) - 1), mode=selector.NumberSelectorMode.BOX)
-                    ),
-                    vol.Optional("delete", default=False): bool,
-                }
-            ),
-            description_placeholder={"step_num": str(self._current_step_index + 1)},
-        )
+        # Fallback if somehow called without input (should not happen with new flow)
+        return await self.async_step_menu()
