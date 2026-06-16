@@ -55,7 +55,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
         self.steps = list(config_entry.options.get("steps", []))
-        self._current_step_index = None
+        self.current_edit_index = None
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -120,19 +120,13 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             return await self.async_step_menu()
 
         if user_input is not None:
-            if user_input.get("selected_step") == "clear_all":
+            selected = user_input.get("selected_step")
+            if selected == "clear_all":
                 self.steps = []
                 return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
-            else:
-                try:
-                    self._current_step_index = int(user_input["selected_step"])
-                    return self.async_show_form(
-                        step_id="edit_step",
-                        data_schema=self._get_edit_schema(self._current_step_index),
-                        description_placeholder={"step_num": str(self._current_step_index + 1)},
-                    )
-                except ValueError:
-                    return await self.async_step_menu()
+            elif selected is not None:
+                self.current_edit_index = int(selected)
+                return await self.async_step_edit_step()
 
         options = {str(i): f"Шаг {i+1}: {step.get('entity_id')} ({step.get('action')})" for i, step in enumerate(self.steps)}
         options["clear_all"] = "Удалить все шаги"
@@ -151,39 +145,18 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
 
-    def _get_edit_schema(self, index: int):
-        """Get the schema for editing a step."""
-        current_step = self.steps[index]
-        return vol.Schema(
-            {
-                vol.Required("entity_id", default=current_step.get("entity_id")): selector.EntitySelector(),
-                vol.Required("action", default=current_step.get("action", "turn_on")): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=["turn_on", "turn_off", "toggle"],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Required("delay", default=current_step.get("delay", 0)): selector.NumberSelector(
-                    selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
-                ),
-                vol.Required("enabled", default=current_step.get("enabled", True)): bool,
-                vol.Required("order", default=index): selector.NumberSelector(
-                    selector.NumberSelectorConfig(min=0, max=max(0, len(self.steps) - 1), mode=selector.NumberSelectorMode.BOX)
-                ),
-                vol.Optional("delete", default=False): bool,
-            }
-        )
-
     async def async_step_edit_step(self, user_input=None):
         """Edit or remove a specific step."""
-        if self._current_step_index is None or self._current_step_index >= len(self.steps):
+        if self.current_edit_index is None or self.current_edit_index >= len(self.steps):
             return await self.async_step_menu()
+
+        current_step = self.steps[self.current_edit_index]
 
         if user_input is not None:
             if user_input.get("delete"):
-                self.steps.pop(self._current_step_index)
+                self.steps.pop(self.current_edit_index)
             else:
-                new_index = int(user_input.get("order", self._current_step_index))
+                new_index = int(user_input.get("order", self.current_edit_index))
                 
                 updated_step = {
                     "entity_id": user_input["entity_id"],
@@ -192,7 +165,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     "enabled": user_input["enabled"],
                 }
                 
-                self.steps.pop(self._current_step_index)
+                self.steps.pop(self.current_edit_index)
                 
                 # Insert at new index, clamped to valid range
                 new_index = max(0, min(new_index, len(self.steps)))
@@ -200,5 +173,26 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 
             return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
 
-        # Fallback if somehow called without input (should not happen with new flow)
-        return await self.async_step_menu()
+        return self.async_show_form(
+            step_id="edit_step",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("entity_id", default=current_step.get("entity_id")): selector.EntitySelector(),
+                    vol.Required("action", default=current_step.get("action", "turn_on")): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["turn_on", "turn_off", "toggle"],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required("delay", default=current_step.get("delay", 0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
+                    ),
+                    vol.Required("enabled", default=current_step.get("enabled", True)): bool,
+                    vol.Required("order", default=self.current_edit_index): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=max(0, len(self.steps) - 1), mode=selector.NumberSelectorMode.BOX)
+                    ),
+                    vol.Optional("delete", default=False): bool,
+                }
+            ),
+            description_placeholder={"step_num": str(self.current_edit_index + 1)},
+        )
