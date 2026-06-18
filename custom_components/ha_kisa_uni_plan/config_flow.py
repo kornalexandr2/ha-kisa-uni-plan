@@ -128,6 +128,8 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     return await self.async_step_add_step()
                 elif action == "manage_steps":
                     return await self.async_step_manage_steps()
+                elif action == "card_info":
+                    return await self.async_step_card_info()
 
             _LOGGER.error(">>> HA KISA UNI PLAN: Showing init form")
             
@@ -165,6 +167,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                                     {"value": "settings", "label": "⚙️ Общие настройки плана"},
                                     {"value": "add_step", "label": "➕ Добавить новый шаг"},
                                     {"value": "manage_steps", "label": "✏️ Редактировать / Удалить шаги"},
+                                    {"value": "card_info", "label": "ℹ️ Инструкция по дашборду"},
                                 ],
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                             )
@@ -179,6 +182,44 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_init: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
+
+    async def async_step_card_info(self, user_input=None):
+        """Show dashboard card instructions."""
+        if user_input is not None:
+            return await self.async_step_init()
+
+        plan_name = self.entry.title
+        switch_id = f"switch.{plan_name.lower().replace(' ', '_')}"
+        
+        yaml_template = """type: markdown
+title: План {plan_name}
+content: >-
+  {% set switch_id = "{switch_id}" %}
+
+  **Статус плана:** {{ states(switch_id) }}
+
+
+  **Шаги плана:**
+  
+  {% set ns = namespace(found=false) %}
+  {% for state in states.switch if state.entity_id.startswith(switch_id + '_step_') %}
+    {% set ns.found = true %}
+    - **Шаг {{ state.attributes.order + 1 }}**: {{ state.attributes.action }} -> {{ state.attributes.target_entity }}
+      (Задержка: {{ state.attributes.delay }} сек.)
+      *Статус шага: {{ state.state }}*
+  {% endfor %}
+
+  {% if not ns.found %}
+    Шаги пока не добавлены.
+  {% endif %}"""
+
+        yaml_code = yaml_template.replace("{plan_name}", plan_name).replace("{switch_id}", switch_id)
+
+        return self.async_show_form(
+            step_id="card_info",
+            data_schema=vol.Schema({}),
+            description_placeholders={"yaml_code": yaml_code}
+        )
 
     async def async_step_settings(self, user_input=None):
         """Manage general settings."""
