@@ -20,7 +20,7 @@
     "step": {
       "init": {
         "title": "Управление планом KiSa",
-        "description": "Текущий план:\n{plan_summary}",
+        "description": "План: **{plan_name}**\n\n{plan_summary}",
         "data": {
           "action": "Действие"
         }

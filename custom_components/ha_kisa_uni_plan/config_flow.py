@@ -108,11 +108,29 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
 
             _LOGGER.error(">>> HA KISA UNI PLAN: Showing init form")
             
+            action_map = {"turn_on": "Включить", "turn_off": "Выключить", "toggle": "Переключить"}
             summary = ""
             for i, step in enumerate(self.steps):
-                summary += f"Шаг {i+1}: {step.get('action')} -> {step.get('entity_id')} (Задержка: {step.get('delay')}с)\n"
+                ent_id = step.get('entity_id')
+                action = step.get('action')
+                delay = step.get('delay', 0)
+                enabled = step.get('enabled', True)
+                
+                # Пытаемся получить человеческое имя сущности
+                state = self.hass.states.get(ent_id) if ent_id else None
+                friendly_name = state.name if state else "Неизвестный объект"
+                action_ru = action_map.get(action, action)
+                
+                status_icon = "✅" if enabled else "❌"
+                
+                summary += f"{status_icon} **Шаг {i+1}:** {action_ru} **{friendly_name}**\n"
+                summary += f"   _{ent_id}_\n"
+                if delay > 0:
+                    summary += f"   ⏱ Задержка: {delay} сек.\n"
+                summary += "\n"
+
             if not summary:
-                summary = "План пуст."
+                summary = "План пока пуст. Добавьте шаги через меню ниже."
 
             return self.async_show_form(
                 step_id="init",
@@ -121,16 +139,19 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                         vol.Required("action", default="settings"): selector.SelectSelector(
                             selector.SelectSelectorConfig(
                                 options=[
-                                    {"value": "settings", "label": "Общие настройки"},
-                                    {"value": "add_step", "label": "Добавить шаг"},
-                                    {"value": "manage_steps", "label": "Управление шагами"},
+                                    {"value": "settings", "label": "⚙️ Общие настройки плана"},
+                                    {"value": "add_step", "label": "➕ Добавить новый шаг"},
+                                    {"value": "manage_steps", "label": "✏️ Редактировать / Удалить шаги"},
                                 ],
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                             )
                         ),
                     }
                 ),
-                description_placeholders={"plan_summary": summary}
+                description_placeholders={
+                    "plan_summary": summary,
+                    "plan_name": self.entry.title
+                }
             )
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_init: %s", e, exc_info=True)
@@ -220,8 +241,19 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     self.current_edit_index = int(selected)
                     return await self.async_step_edit_step()
 
-            options = {str(i): f"Шаг {i+1}: {step.get('entity_id')} ({step.get('action')})" for i, step in enumerate(self.steps)}
-            options["clear_all"] = "Удалить все шаги"
+            options_list = []
+            action_map = {"turn_on": "Включить", "turn_off": "Выключить", "toggle": "Переключить"}
+            
+            for i, step in enumerate(self.steps):
+                ent_id = step.get('entity_id')
+                state = self.hass.states.get(ent_id) if ent_id else None
+                friendly_name = state.name if state else ent_id
+                action_ru = action_map.get(step.get('action'), step.get('action'))
+                
+                label = f"Шаг {i+1}: {friendly_name} ({action_ru})"
+                options_list.append({"value": str(i), "label": label})
+                
+            options_list.append({"value": "clear_all", "label": "🗑️ Удалить все шаги"})
 
             return self.async_show_form(
                 step_id="manage_steps",
@@ -229,7 +261,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     {
                         vol.Required("selected_step"): selector.SelectSelector(
                             selector.SelectSelectorConfig(
-                                options=[{"value": k, "label": v} for k, v in options.items()],
+                                options=options_list,
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                             )
                         ),
