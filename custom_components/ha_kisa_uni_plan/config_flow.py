@@ -62,7 +62,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         _LOGGER.error(">>> HA KISA UNI PLAN: Init OptionsFlowHandler")
         try:
-            self.config_entry = config_entry
+            self.entry = config_entry
             self.steps = []
             self.current_edit_index = None
             _LOGGER.error(">>> HA KISA UNI PLAN: OptionsFlowHandler initialized successfully")
@@ -74,7 +74,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options."""
         _LOGGER.error(">>> HA KISA UNI PLAN: async_step_init started, user_input: %s", user_input)
         try:
-            self.steps = list(self.config_entry.options.get("steps", []))
+            self.steps = list(self.entry.options.get("steps", []))
             
             if user_input is not None:
                 action = user_input.get("action")
@@ -112,11 +112,11 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage general settings."""
         try:
             if user_input is not None:
-                return self.async_create_entry(title="", data={**self.config_entry.options, **user_input, "steps": self.steps})
+                return self.async_create_entry(title="", data={**self.entry.options, **user_input, "steps": self.steps})
 
             # Безопасное получение значений
-            cur_time = self.config_entry.options.get(CONF_TIME, self.config_entry.data.get(CONF_TIME, "00:00:00"))
-            cur_workdays = self.config_entry.options.get(CONF_WORKDAYS_ONLY, self.config_entry.data.get(CONF_WORKDAYS_ONLY, False))
+            cur_time = self.entry.options.get(CONF_TIME, self.entry.data.get(CONF_TIME, "00:00:00"))
+            cur_workdays = self.entry.options.get(CONF_WORKDAYS_ONLY, self.entry.data.get(CONF_WORKDAYS_ONLY, False))
 
             return self.async_show_form(
                 step_id="settings",
@@ -136,7 +136,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         try:
             if user_input is not None:
                 self.steps.append(user_input)
-                return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
+                return self.async_create_entry(title="", data={**self.entry.options, "steps": self.steps})
 
             return self.async_show_form(
                 step_id="add_step",
@@ -170,7 +170,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 selected = user_input.get("selected_step")
                 if selected == "clear_all":
                     self.steps = []
-                    return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
+                    return self.async_create_entry(title="", data={**self.entry.options, "steps": self.steps})
                 elif selected is not None:
                     self.current_edit_index = int(selected)
                     return await self.async_step_edit_step()
@@ -221,7 +221,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     new_index = max(0, min(new_index, len(self.steps)))
                     self.steps.insert(new_index, updated_step)
                     
-                return self.async_create_entry(title="", data={**self.config_entry.options, "steps": self.steps})
+                return self.async_create_entry(title="", data={**self.entry.options, "steps": self.steps})
 
             return self.async_show_form(
                 step_id="edit_step",
