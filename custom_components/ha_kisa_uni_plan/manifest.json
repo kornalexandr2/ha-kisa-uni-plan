@@ -6,5 +6,5 @@
   "codeowners": ["@kornalexandr2"],
   "config_flow": true,
   "iot_class": "local_push",
-  "version": "1.0.12"
+  "version": "1.0.13"
 }

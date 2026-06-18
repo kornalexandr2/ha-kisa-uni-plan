@@ -130,7 +130,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     }
                 ),
-                description_placeholder={"plan_summary": summary}
+                description_placeholders={"plan_summary": summary}
             )
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_init: %s", e, exc_info=True)
@@ -297,7 +297,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_show_form(
                 step_id="edit_step",
                 data_schema=vol.Schema(schema),
-                description_placeholder={"step_num": str(self.current_edit_index + 1)},
+                description_placeholders={"step_num": str(self.current_edit_index + 1)},
             )
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_edit_step: %s", e, exc_info=True)
