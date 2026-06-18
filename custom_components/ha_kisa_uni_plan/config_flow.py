@@ -47,7 +47,12 @@ class KiSaPlanDayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return KiSaPlanDayOptionsFlowHandler(config_entry)
+        _LOGGER.error(">>> HA KISA UNI PLAN: async_get_options_flow called for entry %s", config_entry.entry_id)
+        try:
+            return KiSaPlanDayOptionsFlowHandler(config_entry)
+        except Exception as e:
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_get_options_flow: %s", e, exc_info=True)
+            raise
 
 
 class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
@@ -55,17 +60,25 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self.config_entry = config_entry
-        self.steps = []
-        self.current_edit_index = None
+        _LOGGER.error(">>> HA KISA UNI PLAN: Init OptionsFlowHandler")
+        try:
+            self.config_entry = config_entry
+            self.steps = []
+            self.current_edit_index = None
+            _LOGGER.error(">>> HA KISA UNI PLAN: OptionsFlowHandler initialized successfully")
+        except Exception as e:
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in __init__: %s", e, exc_info=True)
+            raise
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
+        _LOGGER.error(">>> HA KISA UNI PLAN: async_step_init started, user_input: %s", user_input)
         try:
             self.steps = list(self.config_entry.options.get("steps", []))
             
             if user_input is not None:
                 action = user_input.get("action")
+                _LOGGER.error(">>> HA KISA UNI PLAN: User selected action: %s", action)
                 if action == "settings":
                     return await self.async_step_settings()
                 elif action == "add_step":
@@ -73,6 +86,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 elif action == "manage_steps":
                     return await self.async_step_manage_steps()
 
+            _LOGGER.error(">>> HA KISA UNI PLAN: Showing init form")
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
@@ -91,7 +105,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_init: %s", e)
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_init: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
 
     async def async_step_settings(self, user_input=None):
@@ -100,17 +114,21 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             if user_input is not None:
                 return self.async_create_entry(title="", data={**self.config_entry.options, **user_input, "steps": self.steps})
 
+            # Безопасное получение значений
+            cur_time = self.config_entry.options.get(CONF_TIME, self.config_entry.data.get(CONF_TIME, "00:00:00"))
+            cur_workdays = self.config_entry.options.get(CONF_WORKDAYS_ONLY, self.config_entry.data.get(CONF_WORKDAYS_ONLY, False))
+
             return self.async_show_form(
                 step_id="settings",
                 data_schema=vol.Schema(
                     {
-                        vol.Required(CONF_TIME, default=self.config_entry.options.get(CONF_TIME, self.config_entry.data.get(CONF_TIME))): selector.TimeSelector(),
-                        vol.Optional(CONF_WORKDAYS_ONLY, default=self.config_entry.options.get(CONF_WORKDAYS_ONLY, self.config_entry.data.get(CONF_WORKDAYS_ONLY))): bool,
+                        vol.Required(CONF_TIME, default=cur_time): selector.TimeSelector(),
+                        vol.Optional(CONF_WORKDAYS_ONLY, default=cur_workdays): bool,
                     }
                 ),
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_settings: %s", e)
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_settings: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
 
     async def async_step_add_step(self, user_input=None):
@@ -139,7 +157,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_add_step: %s", e)
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_add_step: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
 
     async def async_step_manage_steps(self, user_input=None):
@@ -174,7 +192,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_manage_steps: %s", e)
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_manage_steps: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
 
     async def async_step_edit_step(self, user_input=None):
@@ -200,7 +218,6 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     
                     self.steps.pop(self.current_edit_index)
                     
-                    # Insert at new index, clamped to valid range
                     new_index = max(0, min(new_index, len(self.steps)))
                     self.steps.insert(new_index, updated_step)
                     
@@ -230,5 +247,5 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                 description_placeholder={"step_num": str(self.current_edit_index + 1)},
             )
         except Exception as e:
-            _LOGGER.exception("Error in async_step_edit_step: %s", e)
+            _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_edit_step: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
