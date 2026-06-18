@@ -2,12 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Создание HA KiSa Uni Plan",
+        "title": "Создание плана KiSa",
         "data": {
           "plan_name": "Название плана",
           "start_time": "Время начала",
-          "workdays_only": "Только по рабочим дням",
-          "workday_sensor": "Сенсор рабочих дней"
+          "schedule_type": "Тип расписания",
+          "custom_days": "Дни недели",
+          "workday_sensor": "Сенсор рабочих дней (Workday)"
         }
       }
     },
@@ -17,46 +18,67 @@
   },
   "options": {
     "step": {
-      "menu": {
-        "title": "Управление планом",
-        "menu_options": {
-          "add_step": "Добавить шаг",
-          "manage_steps": "Управление шагами",
-          "settings": "Общие настройки"
+      "init": {
+        "title": "Управление планом KiSa",
+        "description": "Текущий план:\n{plan_summary}",
+        "data": {
+          "action": "Действие"
         }
       },
       "settings": {
         "title": "Общие настройки",
         "data": {
           "start_time": "Время начала",
-          "workdays_only": "Только по рабочим дням"
+          "schedule_type": "Тип расписания",
+          "custom_days": "Дни недели (для Произвольных дней)"
         }
       },
       "add_step": {
         "title": "Добавление шага",
         "data": {
-          "entity_id": "Сущность",
-          "action": "Действие",
+          "entity_id": "Объект (Entity)",
+          "action": "Действие (Служба)",
           "delay": "Задержка (сек)",
-          "enabled": "Активен"
+          "enabled": "Шаг включен"
         }
       },
       "manage_steps": {
         "title": "Управление шагами",
         "data": {
-          "selected_step": "Выберите шаг для редактирования"
+          "selected_step": "Выберите шаг для изменения или удаления"
         }
       },
       "edit_step": {
-        "title": "Редактирование шага {step_num}",
+        "title": "Изменение шага {step_num}",
         "data": {
-          "entity_id": "Сущность",
-          "action": "Действие",
+          "entity_id": "Объект (Entity)",
+          "action": "Действие (Служба)",
           "delay": "Задержка перед выполнением (сек)",
-          "enabled": "Активен",
+          "enabled": "Шаг включен",
           "order": "Порядковый номер (начиная с 0)",
           "delete": "Удалить этот шаг"
         }
+      }
+    }
+  },
+  "selector": {
+    "schedule_type": {
+      "options": {
+        "everyday": "Ежедневно",
+        "workdays": "Только рабочие дни",
+        "weekends": "Только выходные дни",
+        "custom": "Произвольные дни"
+      }
+    },
+    "custom_days": {
+      "options": {
+        "mon": "Понедельник",
+        "tue": "Вторник",
+        "wed": "Среда",
+        "thu": "Четверг",
+        "fri": "Пятница",
+        "sat": "Суббота",
+        "sun": "Воскресенье"
       }
     }
   }

@@ -113,13 +113,28 @@ class KiSaPlanDaySwitch(SwitchEntity, RestoreEntity):
         options = self.config_entry.options
         data = self.config_entry.data
         
-        workdays_only = options.get(CONF_WORKDAYS_ONLY, data.get(CONF_WORKDAYS_ONLY))
-        if workdays_only:
-            workday_sensor = data.get(CONF_WORKDAY_SENSOR, self.config_entry.options.get(CONF_WORKDAY_SENSOR, "binary_sensor.workday_sensor"))
+        legacy_workdays = options.get(CONF_WORKDAYS_ONLY, data.get(CONF_WORKDAYS_ONLY))
+        default_schedule = "workdays" if legacy_workdays else "everyday"
+        schedule_type = options.get("schedule_type", data.get("schedule_type", default_schedule))
+
+        if schedule_type != "everyday":
+            workday_sensor = data.get("workday_sensor", options.get("workday_sensor", "binary_sensor.workday_sensor"))
             state = self.hass.states.get(workday_sensor)
-            if state and state.state != "on":
+            is_workday = state and state.state == "on"
+            
+            if schedule_type == "workdays" and not is_workday:
                 _LOGGER.debug("Not a workday according to %s, skipping", workday_sensor)
                 return
+            if schedule_type == "weekends" and is_workday:
+                _LOGGER.debug("Is a workday according to %s, skipping weekend schedule", workday_sensor)
+                return
+            if schedule_type == "custom":
+                custom_days = options.get("custom_days", data.get("custom_days", []))
+                weekdays_map = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+                today_str = weekdays_map[_now.weekday()]
+                if today_str not in custom_days:
+                    _LOGGER.debug("Today (%s) is not in custom days %s, skipping", today_str, custom_days)
+                    return
 
         _LOGGER.info("Starting routine: %s", self.name)
         if self._routine_task and not self._routine_task.done():

@@ -12,8 +12,14 @@ from .const import (
     CONF_PLAN_NAME,
     CONF_TIME,
     CONF_WORKDAYS_ONLY,
+    CONF_SCHEDULE_TYPE,
+    CONF_CUSTOM_DAYS,
     CONF_WORKDAY_SENSOR,
     DEFAULT_WORKDAY_SENSOR,
+    SCHEDULE_EVERYDAY,
+    SCHEDULE_WORKDAYS,
+    SCHEDULE_WEEKENDS,
+    SCHEDULE_CUSTOM,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,7 +41,21 @@ class KiSaPlanDayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_PLAN_NAME): str,
                     vol.Required(CONF_TIME): selector.TimeSelector(),
-                    vol.Optional(CONF_WORKDAYS_ONLY, default=False): bool,
+                    vol.Required(CONF_SCHEDULE_TYPE, default=SCHEDULE_EVERYDAY): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[SCHEDULE_EVERYDAY, SCHEDULE_WORKDAYS, SCHEDULE_WEEKENDS, SCHEDULE_CUSTOM],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="schedule_type",
+                        )
+                    ),
+                    vol.Optional(CONF_CUSTOM_DAYS, default=[]): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                            multiple=True,
+                            mode=selector.SelectSelectorMode.LIST,
+                            translation_key="custom_days",
+                        )
+                    ),
                     vol.Optional(CONF_WORKDAY_SENSOR, default=DEFAULT_WORKDAY_SENSOR): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain="binary_sensor")
                     ),
@@ -87,6 +107,13 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     return await self.async_step_manage_steps()
 
             _LOGGER.error(">>> HA KISA UNI PLAN: Showing init form")
+            
+            summary = ""
+            for i, step in enumerate(self.steps):
+                summary += f"Шаг {i+1}: {step.get('action')} -> {step.get('entity_id')} (Задержка: {step.get('delay')}с)\n"
+            if not summary:
+                summary = "План пуст."
+
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
@@ -103,6 +130,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     }
                 ),
+                description_placeholder={"plan_summary": summary}
             )
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_init: %s", e, exc_info=True)
@@ -114,16 +142,33 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             if user_input is not None:
                 return self.async_create_entry(title="", data={**self.entry.options, **user_input, "steps": self.steps})
 
-            # Безопасное получение значений
             cur_time = self.entry.options.get(CONF_TIME, self.entry.data.get(CONF_TIME, "00:00:00"))
-            cur_workdays = self.entry.options.get(CONF_WORKDAYS_ONLY, self.entry.data.get(CONF_WORKDAYS_ONLY, False))
+            
+            legacy_workdays = self.entry.options.get(CONF_WORKDAYS_ONLY, self.entry.data.get(CONF_WORKDAYS_ONLY))
+            default_schedule = SCHEDULE_WORKDAYS if legacy_workdays else SCHEDULE_EVERYDAY
+            cur_schedule = self.entry.options.get(CONF_SCHEDULE_TYPE, self.entry.data.get(CONF_SCHEDULE_TYPE, default_schedule))
+            cur_custom_days = self.entry.options.get(CONF_CUSTOM_DAYS, self.entry.data.get(CONF_CUSTOM_DAYS, []))
 
             return self.async_show_form(
                 step_id="settings",
                 data_schema=vol.Schema(
                     {
                         vol.Required(CONF_TIME, default=cur_time): selector.TimeSelector(),
-                        vol.Optional(CONF_WORKDAYS_ONLY, default=cur_workdays): bool,
+                        vol.Required(CONF_SCHEDULE_TYPE, default=cur_schedule): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[SCHEDULE_EVERYDAY, SCHEDULE_WORKDAYS, SCHEDULE_WEEKENDS, SCHEDULE_CUSTOM],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="schedule_type",
+                            )
+                        ),
+                        vol.Optional(CONF_CUSTOM_DAYS, default=cur_custom_days): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.LIST,
+                                translation_key="custom_days",
+                            )
+                        ),
                     }
                 ),
             )
@@ -223,27 +268,35 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                     
                 return self.async_create_entry(title="", data={**self.entry.options, "steps": self.steps})
 
+            schema = {}
+            ent_id = current_step.get("entity_id")
+            if ent_id:
+                schema[vol.Required("entity_id", default=ent_id)] = selector.EntitySelector()
+            else:
+                schema[vol.Required("entity_id")] = selector.EntitySelector()
+
+            schema[vol.Required("action", default=current_step.get("action", "turn_on"))] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["turn_on", "turn_off", "toggle"],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+            schema[vol.Required("delay", default=current_step.get("delay", 0))] = selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
+            )
+            schema[vol.Required("enabled", default=current_step.get("enabled", True))] = bool
+            
+            max_idx = max(0, len(self.steps) - 1)
+            if max_idx > 0:
+                schema[vol.Required("order", default=self.current_edit_index)] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=max_idx, mode=selector.NumberSelectorMode.BOX)
+                )
+            
+            schema[vol.Optional("delete", default=False)] = bool
+
             return self.async_show_form(
                 step_id="edit_step",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required("entity_id", default=current_step.get("entity_id")): selector.EntitySelector(),
-                        vol.Required("action", default=current_step.get("action", "turn_on")): selector.SelectSelector(
-                            selector.SelectSelectorConfig(
-                                options=["turn_on", "turn_off", "toggle"],
-                                mode=selector.SelectSelectorMode.DROPDOWN,
-                            )
-                        ),
-                        vol.Required("delay", default=current_step.get("delay", 0)): selector.NumberSelector(
-                            selector.NumberSelectorConfig(min=0, max=3600, unit_of_measurement="сек")
-                        ),
-                        vol.Required("enabled", default=current_step.get("enabled", True)): bool,
-                        vol.Required("order", default=self.current_edit_index): selector.NumberSelector(
-                            selector.NumberSelectorConfig(min=0, max=max(0, len(self.steps) - 1), mode=selector.NumberSelectorMode.BOX)
-                        ),
-                        vol.Optional("delete", default=False): bool,
-                    }
-                ),
+                data_schema=vol.Schema(schema),
                 description_placeholder={"step_num": str(self.current_edit_index + 1)},
             )
         except Exception as e:
