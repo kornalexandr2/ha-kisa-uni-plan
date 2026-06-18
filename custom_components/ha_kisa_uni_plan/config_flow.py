@@ -29,10 +29,18 @@ class KiSaPlanDayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize the flow."""
+        self._temp_user_data = {}
+
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
+            self._temp_user_data = user_input
+            if user_input.get(CONF_SCHEDULE_TYPE) == SCHEDULE_CUSTOM:
+                return await self.async_step_custom_days_setup()
+            
             return self.async_create_entry(title=user_input[CONF_PLAN_NAME], data=user_input)
 
         return self.async_show_form(
@@ -48,7 +56,25 @@ class KiSaPlanDayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             translation_key="schedule_type",
                         )
                     ),
-                    vol.Optional(CONF_CUSTOM_DAYS, default=[]): selector.SelectSelector(
+                    vol.Optional(CONF_WORKDAY_SENSOR, default=DEFAULT_WORKDAY_SENSOR): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="binary_sensor")
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_custom_days_setup(self, user_input=None):
+        """Handle custom days setup."""
+        if user_input is not None:
+            final_data = {**self._temp_user_data, **user_input}
+            return self.async_create_entry(title=final_data[CONF_PLAN_NAME], data=final_data)
+
+        return self.async_show_form(
+            step_id="custom_days_setup",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_CUSTOM_DAYS, default=[]): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
                             multiple=True,
@@ -56,12 +82,8 @@ class KiSaPlanDayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             translation_key="custom_days",
                         )
                     ),
-                    vol.Optional(CONF_WORKDAY_SENSOR, default=DEFAULT_WORKDAY_SENSOR): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="binary_sensor")
-                    ),
                 }
             ),
-            errors=errors,
         )
 
     @staticmethod
@@ -85,6 +107,7 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             self.entry = config_entry
             self.steps = []
             self.current_edit_index = None
+            self._temp_settings = {}
             _LOGGER.error(">>> HA KISA UNI PLAN: OptionsFlowHandler initialized successfully")
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in __init__: %s", e, exc_info=True)
@@ -161,6 +184,10 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage general settings."""
         try:
             if user_input is not None:
+                self._temp_settings = user_input
+                if user_input.get(CONF_SCHEDULE_TYPE) == SCHEDULE_CUSTOM:
+                    return await self.async_step_custom_days()
+                
                 return self.async_create_entry(title="", data={**self.entry.options, **user_input, "steps": self.steps})
 
             cur_time = self.entry.options.get(CONF_TIME, self.entry.data.get(CONF_TIME, "00:00:00"))
@@ -168,7 +195,6 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
             legacy_workdays = self.entry.options.get(CONF_WORKDAYS_ONLY, self.entry.data.get(CONF_WORKDAYS_ONLY))
             default_schedule = SCHEDULE_WORKDAYS if legacy_workdays else SCHEDULE_EVERYDAY
             cur_schedule = self.entry.options.get(CONF_SCHEDULE_TYPE, self.entry.data.get(CONF_SCHEDULE_TYPE, default_schedule))
-            cur_custom_days = self.entry.options.get(CONF_CUSTOM_DAYS, self.entry.data.get(CONF_CUSTOM_DAYS, []))
 
             return self.async_show_form(
                 step_id="settings",
@@ -182,20 +208,36 @@ class KiSaPlanDayOptionsFlowHandler(config_entries.OptionsFlow):
                                 translation_key="schedule_type",
                             )
                         ),
-                        vol.Optional(CONF_CUSTOM_DAYS, default=cur_custom_days): selector.SelectSelector(
-                            selector.SelectSelectorConfig(
-                                options=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-                                multiple=True,
-                                mode=selector.SelectSelectorMode.LIST,
-                                translation_key="custom_days",
-                            )
-                        ),
                     }
                 ),
             )
         except Exception as e:
             _LOGGER.error(">>> HA KISA UNI PLAN: CRITICAL ERROR in async_step_settings: %s", e, exc_info=True)
             return self.async_abort(reason="unknown")
+
+    async def async_step_custom_days(self, user_input=None):
+        """Handle custom days selection in options."""
+        if user_input is not None:
+            final_data = {**self.entry.options, **self._temp_settings, **user_input, "steps": self.steps}
+            return self.async_create_entry(title="", data=final_data)
+
+        cur_custom_days = self.entry.options.get(CONF_CUSTOM_DAYS, self.entry.data.get(CONF_CUSTOM_DAYS, []))
+
+        return self.async_show_form(
+            step_id="custom_days",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_CUSTOM_DAYS, default=cur_custom_days): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                            multiple=True,
+                            mode=selector.SelectSelectorMode.LIST,
+                            translation_key="custom_days",
+                        )
+                    ),
+                }
+            ),
+        )
 
     async def async_step_add_step(self, user_input=None):
         """Add a new step."""

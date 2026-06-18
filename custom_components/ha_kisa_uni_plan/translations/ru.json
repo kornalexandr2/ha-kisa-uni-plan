@@ -7,8 +7,13 @@
           "plan_name": "Название плана",
           "start_time": "Время начала",
           "schedule_type": "Тип расписания",
-          "custom_days": "Дни недели",
           "workday_sensor": "Сенсор рабочих дней (Workday)"
+        }
+      },
+      "custom_days_setup": {
+        "title": "Выбор произвольных дней",
+        "data": {
+          "custom_days": "Дни недели"
         }
       }
     },
@@ -29,8 +34,13 @@
         "title": "Общие настройки",
         "data": {
           "start_time": "Время начала",
-          "schedule_type": "Тип расписания",
-          "custom_days": "Дни недели (для Произвольных дней)"
+          "schedule_type": "Тип расписания"
+        }
+      },
+      "custom_days": {
+        "title": "Выбор произвольных дней",
+        "data": {
+          "custom_days": "Дни недели"
         }
       },
       "add_step": {
