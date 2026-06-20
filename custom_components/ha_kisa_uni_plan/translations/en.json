@@ -6,43 +6,94 @@
         "data": {
           "plan_name": "Plan Name",
           "start_time": "Start Time",
-          "workdays_only": "Workdays only",
+          "schedule_type": "Schedule Type",
           "workday_sensor": "Workday Sensor"
         }
+      },
+      "custom_days_setup": {
+        "title": "Select Custom Days",
+        "data": {
+          "custom_days": "Days of the Week"
+        }
       }
+    },
+    "abort": {
+      "already_configured": "This plan is already configured"
     }
   },
   "options": {
     "step": {
-      "menu": {
-        "title": "Manage Plan",
-        "menu_options": {
-          "add_step": "Add Step",
-          "manage_steps": "Manage Steps",
-          "settings": "General Settings"
+      "init": {
+        "title": "Manage KiSa Plan",
+        "description": "Plan: **{plan_name}**\n\n{plan_summary}",
+        "data": {
+          "action": "Action"
         }
       },
       "settings": {
         "title": "General Settings",
         "data": {
           "start_time": "Start Time",
-          "workdays_only": "Workdays only"
+          "schedule_type": "Schedule Type",
+          "workday_sensor": "Workday Sensor"
+        }
+      },
+      "card_info": {
+        "title": "Dashboard Card Instructions",
+        "description": "Add a **Markdown** card to your dashboard and paste the following YAML code:\n\n```yaml\n{yaml_code}\n```\n\nThis code will automatically display all steps and their current statuses. Press **Submit** to return to the main menu."
+      },
+      "custom_days": {
+        "title": "Select Custom Days",
+        "data": {
+          "custom_days": "Days of the Week"
         }
       },
       "add_step": {
         "title": "Add Step",
         "data": {
           "entity_id": "Entity",
-          "action": "Action",
+          "action": "Action (Service)",
           "delay": "Delay (sec)",
-          "enabled": "Enabled"
+          "enabled": "Step Enabled"
         }
       },
       "manage_steps": {
         "title": "Manage Steps",
         "data": {
-          "clear_all": "Clear all steps"
+          "selected_step": "Select a step to edit or delete"
         }
+      },
+      "edit_step": {
+        "title": "Edit Step {step_num}",
+        "data": {
+          "entity_id": "Entity",
+          "action": "Action (Service)",
+          "delay": "Delay before execution (sec)",
+          "enabled": "Step Enabled",
+          "order": "Order (starting from 0)",
+          "delete": "Delete this step"
+        }
+      }
+    }
+  },
+  "selector": {
+    "schedule_type": {
+      "options": {
+        "everyday": "Every day",
+        "workdays": "Workdays only",
+        "weekends": "Weekends only",
+        "custom": "Custom days"
+      }
+    },
+    "custom_days": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
       }
     }
   }

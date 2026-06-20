@@ -6,5 +6,6 @@
   "codeowners": ["@kornalexandr2"],
   "config_flow": true,
   "iot_class": "local_push",
-  "version": "1.0.16"
+  "homeassistant": "2024.1.0",
+  "version": "1.0.17"
 }
